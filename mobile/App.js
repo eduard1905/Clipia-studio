@@ -28,7 +28,7 @@ export default function App() {
       if (!response.ok) throw new Error(data.detail || 'El servidor no pudo procesar los vídeos.');
       setResult(JSON.stringify(data, null, 2));
       Alert.alert('Proceso terminado', 'El servidor respondió. Revisa los enlaces devueltos abajo.');
-    } catch (e) { Alert.alert('No se pudo procesar', `${e.message}\n\nComprueba la URL y que el servidor esté encendido.`); }
+    } catch (e) {const mensaje = e?.message || String(e);setResult('ERROR AL PROCESAR: ' + mensaje);Alert.alert('No se pudo procesar', mensaje);}
     finally { setBusy(false); }
   };
   return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.page}>
