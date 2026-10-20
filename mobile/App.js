@@ -77,6 +77,29 @@ export default function App() {
         const detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail || data);
         throw new Error(detail || 'El servidor rechazó la solicitud.');
       }
+
+      // The server now returns a job ID quickly and renders clips in the background.
+      if (data.job_id) {
+        const jobId = data.job_id;
+        setStatus('Vídeo recibido. Generando clips en segundo plano…');
+        let result = null;
+        for (let attempt = 0; attempt < 600; attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          const statusResponse = await fetch(base + '/status/' + encodeURIComponent(jobId));
+          const statusRaw = await statusResponse.text();
+          let statusData;
+          try { statusData = JSON.parse(statusRaw); } catch { statusData = { detail: statusRaw }; }
+          if (!statusResponse.ok) {
+            const detail = typeof statusData.detail === 'string' ? statusData.detail : JSON.stringify(statusData.detail || statusData);
+            throw new Error(detail || 'No se pudo consultar el progreso.');
+          }
+          if (statusData.status === 'error') throw new Error(statusData.message || 'El servidor no pudo generar los clips.');
+          if (statusData.status === 'done') { result = statusData; break; }
+          setStatus((statusData.message || 'Generando clips…') + ' (' + (statusData.progress ?? 0) + '%)');
+        }
+        if (!result) throw new Error('El procesamiento está tardando demasiado. Comprueba que el servidor siga encendido e inténtalo de nuevo.');
+        data = result;
+      }
       if (!data.download_url) throw new Error('El servidor respondió, pero no envió el enlace de descarga.');
       const fullUrl = data.download_url.startsWith('http') ? data.download_url : base + data.download_url;
       setDownloadUrl(fullUrl);
